@@ -1,13 +1,15 @@
-FROM ubuntu:16.04
-
+FROM debian:jessie
+ 
 ENV DEBIAN_FRONTEND=noninteractive \
     ANDROID_HOME=/opt/android-sdk-linux \
-    NPM_VERSION=5.4.2 \
-    IONIC_VERSION=3.12.0 \
-    CORDOVA_VERSION=7.0.1 \
+    NPM_VERSION=5.3.0 \
+    IONIC_VERSION=3.13.1 \
+    CORDOVA_VERSION=7.1.0 \
     YARN_VERSION=1.1.0 \
+    # Fix for the issue with Selenium, as described here:
+    # https://github.com/SeleniumHQ/docker-selenium/issues/87
     DBUS_SESSION_BUS_ADDRESS=/dev/null
-
+ 
 # Install basics
 RUN apt-get update &&  \
     apt-get install -y git wget curl unzip ruby ruby-dev build-essential && \
@@ -24,16 +26,16 @@ RUN apt-get update &&  \
     rm google-chrome-stable_current_amd64.deb && \
     mkdir Sources && \
     mkdir -p /root/.cache/yarn/ && \
-
+ 
 # Font libraries
     apt-get -qqy install fonts-ipafont-gothic xfonts-100dpi xfonts-75dpi xfonts-cyrillic xfonts-scalable libfreetype6 libfontconfig && \
-
+ 
 # install python-software-properties (so you can do add-apt-repository)
     apt-get update && apt-get install -y -q python-software-properties software-properties-common  && \
     add-apt-repository "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" -y && \
     echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections && \
     apt-get update && apt-get -y install oracle-java8-installer && \
-
+ 
 # System libs for android enviroment
     echo ANDROID_HOME="${ANDROID_HOME}" >> /etc/environment && \
     dpkg --add-architecture i386 && \
@@ -42,21 +44,28 @@ RUN apt-get update &&  \
     apt-get clean && \
     apt-get autoclean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-
+ 
 # Install Android Tools
     mkdir  /opt/android-sdk-linux && cd /opt/android-sdk-linux && \
     wget --output-document=android-tools-sdk.zip --quiet https://dl.google.com/android/repository/tools_r25.2.3-linux.zip && \
     unzip -q android-tools-sdk.zip && \
     rm -f android-tools-sdk.zip && \
-    chown -R root. /opt
-
+#    chown -R root. /opt
+ 
+# Install Gradle
+    mkdir  /opt/gradle && cd /opt/gradle && \
+    wget --output-document=gradle.zip --quiet https://services.gradle.org/distributions/gradle-3.4.1-bin.zip && \
+    unzip -q gradle.zip && \
+    rm -f gradle.zip && \
+    chown -R root. /opt   
+               
 # Setup environment
-ENV PATH ${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools
-
+ENV PATH ${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:/opt/gradle/gradle-3.4.1/bin
+ 
 # Install Android SDK
-RUN yes Y | ${ANDROID_HOME}/tools/bin/sdkmanager "build-tools;25.0.2" "platforms;android-25" "platform-tools"
+RUN yes Y | ${ANDROID_HOME}/tools/bin/sdkmanager "build-tools;26.0.2" "platforms;android-26" "platform-tools"
 RUN cordova telemetry off
-
+ 
 WORKDIR Sources
 EXPOSE 8100 35729
 CMD ["ionic", "serve"]
